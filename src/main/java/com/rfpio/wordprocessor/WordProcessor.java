@@ -28,20 +28,22 @@ public class WordProcessor {
 
         try {
             ClassLoader classLoader = WordProcessor.class.getClassLoader();
-            File file = new File(classLoader.getResource("rfpio.docx").getFile());
+            File file = new File(classLoader.getResource("rfpio.docx").getFile()); //Load file from classpath
 
             FileInputStream fis = new FileInputStream(file);
-            XWPFDocument xdoc = new XWPFDocument(OPCPackage.open(fis));
+            XWPFDocument xdoc = new XWPFDocument(OPCPackage.open(fis)); // initialize word document
 
             Iterator bodyElementIterator = xdoc.getBodyElementsIterator();
-            while (bodyElementIterator.hasNext()) {
+            while (bodyElementIterator.hasNext()) {  // iterate over elements in the document
                 IBodyElement element = (IBodyElement) bodyElementIterator.next();
 
-                if("PARAGRAPH".equalsIgnoreCase(element.getElementType().name())) {
-                    updateStyleCount(element.getBody().getParagraphs());
+                if("PARAGRAPH".equalsIgnoreCase(element.getElementType().name())) { // check if the element is a paragraph, update the count of each style
+                    XWPFParagraph paragraph = (XWPFParagraph) element;
+                    updateStyleCount(paragraph);
+
                 }
 
-                if ("TABLE".equalsIgnoreCase(element.getElementType().name())) {
+                if ("TABLE".equalsIgnoreCase(element.getElementType().name())) { //check if the element is a table, process each table cell
                     processTable(element.getBody().getTables());
                 }
             }
@@ -67,17 +69,16 @@ public class WordProcessor {
             for (int i = 0; i < table.getRows().size(); i++) {
                 for (int j = 0; j < table.getRow(i).getTableCells().size(); j++) {
                     if(ifExists(table,i,j)) {
-                        processTable(table.getRow(i).getCell(j).getTables());
+                        processTable(table.getRow(i).getCell(j).getTables()); // check if it has a nested table
                     }else {
-                        updateStyleCount(table.getRow(i).getCell(j).getParagraphs());
+                        updateStyleCount((XWPFParagraph) table.getRow(i).getCell(j).getBodyElements().get(0));
                     }
                 }
             }
         }
     }
 
-    private static void updateStyleCount(List<XWPFParagraph> paragraphs) {
-        paragraphs.stream().forEach(paragraph -> {
+    private static void updateStyleCount(XWPFParagraph paragraph) { //update style count
             String style = paragraph.getStyle();
             if(style != null) {
                 if(styleCountMap.get(style) == null) {
@@ -88,7 +89,6 @@ public class WordProcessor {
                     styleCountMap.put(style,newCount);
                 }
             }
-        });
     }
 
     private static boolean ifExists(XWPFTable table, int i, int j) {
